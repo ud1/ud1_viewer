@@ -1,0 +1,18 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/grid_fs.glsl</file>
+        <file>shaders/grid_vs.glsl</file>
+        <file>shaders/sphere_vs.glsl</file>
+        <file>shaders/sphere_gs.glsl</file>
+        <file>shaders/sphere_fs.glsl</file>
+        <file>shaders/disk_vs.glsl</file>
+        <file>shaders/disk_gs.glsl</file>
+        <file>shaders/disk_fs.glsl</file>
+        <file>shaders/rect_vs.glsl</file>
+        <file>shaders/rect_gs.glsl</file>
+        <file>shaders/rect_fs.glsl</file>
+        <file>shaders/cylinder025_vs.glsl</file>
+        <file>shaders/cylinder025_gs.glsl</file>
+        <file>shaders/cylinder025_fs.glsl</file>
+    </qresource>
+</RCC>
