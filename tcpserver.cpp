@@ -8,43 +8,57 @@
 #include <QDir>
 #include <cstdlib>
 #include <QDebug>
+#include <boost/endian/conversion.hpp>
+
+using boost::asio::ip::tcp;
 
 TcpServer::TcpServer(QObject *parent) : QObject(parent)
 {
-    connect(&tcpServer, &QTcpServer::newConnection, this, &TcpServer::newConnection);
+
+}
+
+TcpServer::~TcpServer()
+{
+    stop();
 }
 
 void TcpServer::start()
 {
-    Settings settings;
-    if (!tcpServer.listen(QHostAddress::Any, settings.port))
+    try
     {
-        // TODO parent?
-        QMessageBox::critical(nullptr, "Open TCP server error", tcpServer.errorString());
-        return;
+        Settings settings;
+
+        boost::asio::ip::tcp::endpoint endpoint(tcp::v4(), settings.port);
+        asioTcpServer.reset();
+        asioTcpServer.reset(new AsioTcpServer(io_service, endpoint));
+
+        connect(asioTcpServer.get(), &AsioTcpServer::onNewConnection, this, &TcpServer::newConnection, Qt::QueuedConnection);
+        connect(asioTcpServer.get(), &AsioTcpServer::onNewData, this, &TcpServer::onNewData);
+
+        thread = std::thread([this](){
+            LOG("RUN");
+            io_service.run();
+            LOG("RUN FINISH");
+        });
     }
+    catch (std::exception& e)
+    {
+        std::cerr << "Exception: " << e.what() << "\n";
+        QMessageBox::critical(nullptr, "Open TCP server error", e.what());
+    }
+}
+
+void TcpServer::stop()
+{
+    LOG("STOP");
+    io_service.stop();
+
+    if (thread.joinable())
+        thread.join();
 }
 
 void TcpServer::newConnection()
 {
-    if (socket)
-    {
-        socket->close();
-    }
-    socket = tcpServer.nextPendingConnection();
-    if (!socket)
-        return;
-
-    socket->setSocketOption(QAbstractSocket::LowDelayOption, 0);
-
-    connect(socket, &QAbstractSocket::disconnected,
-                socket, &QObject::deleteLater);
-
-    connect(socket, &QIODevice::readyRead, this, &TcpServer::readMessage);
-    connect(socket, &QAbstractSocket::disconnected, this, &TcpServer::disconnected);
-    dataStream.resetStatus();
-    dataStream.setDevice(socket);
-
     if (outputFile.isOpen())
         outputFile.close();
 
@@ -66,45 +80,24 @@ void TcpServer::newConnection()
     emit onNewConnection();
 }
 
-void TcpServer::readMessage()
+void TcpServer::onNewData(const std::string &data)
 {
-    while(true)
+    std::istringstream iss(data);
+
+    Obj obj = readObj(iss);
+    if (iss)
     {
-        dataStream.startTransaction();
+        emit newObj(obj);
+    }
 
-        quint32 size;
-        dataStream >> size;
-
-        if (dataStream.status() != QDataStream::Ok)
-        {
-            dataStream.abortTransaction();
-            return;
-        }
-
-        if (!size)
-            return;
-
-        std::string data;
-        data.resize(size);
-        dataStream.readRawData(&data[0], size);
-        if (!dataStream.commitTransaction())
-            return;
-
-        std::istringstream iss(data);
-
-        Obj obj = readObj(iss);
-        if (iss)
-        {
-            emit newObj(obj);
-        }
-
-        if (outputFile.isOpen())
-        {
-            QDataStream outStream;
-            outStream.setDevice(&outputFile);
-            outStream << size;
-            outStream.writeRawData(&data[0], size);
-        }
+    if (outputFile.isOpen())
+    {
+        uint32_t size = data.size();
+        QDataStream outStream;
+        outStream.setDevice(&outputFile);
+        outStream << size;
+        outStream.writeRawData(&data[0], size);
+        LOG("WRITTEN " << size);
     }
 }
 
@@ -113,35 +106,105 @@ void TcpServer::disconnected()
     if (outputFile.isOpen())
         outputFile.close();
 
-    socket = nullptr;
+    qDebug("DISCONNECTED");
 }
 
 void TcpServer::settingsChanged()
 {
-    if (tcpServer.isListening())
-        tcpServer.close();
-
     if (outputFile.isOpen())
         outputFile.close();
 
+    stop();
     start();
 }
 
 void TcpServer::sendKeyEvent(const Obj &obj)
 {
-    if (!socket)
-        return;
-
-    qDebug() << "SEND ";
-
     std::ostringstream oss;
     writeObj(oss, obj);
 
     std::string str = oss.str();
-    QDataStream outStream;
-    outStream.setDevice(socket);
-    outStream << (uint32_t) str.size();
-    int written = outStream.writeRawData(str.c_str(), str.size());
 
-    socket->flush();
+    if (asioTcpServer)
+        asioTcpServer->sendCmd(str);
+}
+
+void TcpConnection::doReadSize()
+{
+    auto self(shared_from_this());
+    boost::asio::async_read(socket_,
+                            boost::asio::buffer(&msgSize, sizeof(msgSize)),
+                            [this, self](boost::system::error_code ec, std::size_t /*length*/)
+    {
+        if (!ec)
+        {
+            doReadBody(boost::endian::big_to_native(self->msgSize));
+        }
+        else
+        {
+            asioTcpServer->processDisconnect();
+        }
+    });
+}
+
+void TcpConnection::doReadBody(uint32_t size)
+{
+    data.resize(size, ' ');
+    auto self(shared_from_this());
+
+    boost::asio::async_read(socket_,
+                            boost::asio::buffer(data.data(), size),
+                            [this, self, size](boost::system::error_code ec, std::size_t /*length*/)
+    {
+        if (!ec)
+        {
+            processData();
+            doReadSize();
+        }
+        else
+        {
+            asioTcpServer->processDisconnect();
+        }
+    });
+}
+
+void TcpConnection::sendCmd(const std::string &cmd)
+{
+    uint32_t size = cmd.size();
+
+    size = boost::endian::native_to_big(size);
+
+    try
+    {
+        boost::asio::write(socket_, boost::asio::buffer(&size, sizeof(size)));
+        boost::asio::write(socket_, boost::asio::buffer(cmd, cmd.size()));
+    }
+    catch (std::exception& e)
+    {
+        asioTcpServer->processDisconnect();
+        std::cerr << "Exception: " << e.what() << "\n";
+    }
+}
+
+void TcpConnection::processData()
+{
+    asioTcpServer->processData(data);
+}
+
+void AsioTcpServer::do_accept()
+{
+    acceptor_.async_accept(socket_,
+                           [this](boost::system::error_code ec)
+    {
+        if (!ec)
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            connection = std::make_shared<TcpConnection>(std::move(socket_), this);
+            connection->start();
+
+            emit onNewConnection();
+        }
+
+        do_accept();
+    });
 }

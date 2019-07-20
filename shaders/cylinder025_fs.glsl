@@ -39,8 +39,10 @@ void main()
     vec3 norm = -normalize(mat3(M) * vec3(pointPos.xy - vec2(0.5, 0.5), 0));
     pointPos = (M * vec4(pointPos, 1)).xyz;
     
-    float wid = 0.03;
-	vec3 pointPosMod = sign(mod(pointPos + vec3(wid, wid, wid) * 0.5, vec3(1, 1, 1)) - vec3(wid, wid, wid));
+    float wid = 0.02;
+    float gridScale = 0.2;
+
+        vec3 pointPosMod = sign(mod(pointPos * gridScale + vec3(wid, wid, wid) * 0.5, vec3(1, 1, 1)) - vec3(wid, wid, wid));
 	float val = max(0.5, min(min(pointPosMod.x, pointPosMod.y), pointPosMod.z));
 	
 	float ang = dot(norm, normalize(lightPos - pointPos));

@@ -11,8 +11,8 @@ void Camera::init()
     reloadSettings();
 
     position = V3(0.0f, 0.0f, 0.0f);
-    fw = V3(0.0f, 1.0f, 0.0f);
-    r = V3(1.0f, 0.0f, 0.0f);
+    fw = V3(0.0f, 0.0f, 1.0f);
+    r = V3(-1.0f, 0.0f, 0.0f);
     yaw = pitch = 0.0f;
     pitch = 0.0f;
 

@@ -15,7 +15,7 @@ struct TcpClient {
 
     TcpClient() : socket(io_service) {}
 
-    void sendCmd(std::__cxx11::string cmd);
+    void sendCmd(std::string cmd);
 
     void run();
 
@@ -23,9 +23,12 @@ struct TcpClient {
 
     ~TcpClient()
     {
-        io_service.stop();
+        socket.shutdown(boost::asio::socket_base::shutdown_both);
         socket.close();
-        readTcpThread.join();
+        io_service.stop();
+
+        if (readTcpThread.joinable())
+            readTcpThread.join();
     }
 };
 

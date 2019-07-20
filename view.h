@@ -42,7 +42,7 @@ signals:
     void keyEvent(const Obj &obj);
 
 public slots:
-    void changeFrame(std::shared_ptr<Frame> renderFrame);
+    void changeFrame(std::shared_ptr<Frame> renderFrame, int totalCount);
     void fieldSizeChange(int w, int h);
     void field3d(const P &minP, const P &maxP, double hMin, double hMax, double cellSize);
     void addStaticObject(const SObj &sobj);

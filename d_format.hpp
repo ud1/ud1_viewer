@@ -94,7 +94,7 @@ Obj readObj(std::istream &istream);
 struct Frame {
     unsigned tick = 0;
     std::vector<Obj> objs;
-    mutable std::mutex mutex;
+    mutable std::recursive_mutex mutex;
 };
 
 std::ostream &operator << (std::ostream &str, const SObj &obj);

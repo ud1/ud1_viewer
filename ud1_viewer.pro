@@ -15,7 +15,7 @@ TEMPLATE = app
 # any feature of Qt which has been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
-DEFINES += QT_DEPRECATED_WARNINGS
+DEFINES += QT_DEPRECATED_WARNINGS ENABLE_LOGGING
 
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -32,7 +32,8 @@ SOURCES += nanovg/nanovg.c \
     tcpserver.cpp \
     camera.cpp \
     shader.cpp \
-    d_format.cpp
+    d_format.cpp \
+    stateholder.cpp
 
 HEADERS += \
         mainwindow.h \
@@ -44,15 +45,15 @@ HEADERS += \
     myutils3d.hpp \
     camera.h \
     shader.h \
-    d_format.hpp
+    d_format.hpp \
+    stateholder.h
 
 FORMS += \
         mainwindow.ui \
-    settingsdialog.ui \
     settingsdialog.ui
 
 INCLUDEPATH += "nanovg/"
-LIBS += -lGL -lGLEW
+LIBS += -lGL -lGLEW -lboost_system
 
 CONFIG += c++1z
 

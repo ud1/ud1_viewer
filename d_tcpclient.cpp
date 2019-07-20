@@ -44,7 +44,7 @@ void TcpClient::run() {
                 else if (error)
                     throw boost::system::system_error(error); // Some other error.
 
-                std::__cxx11::string command{data.data(), data.data() + data.size()};
+                std::string command{data.data(), data.data() + data.size()};
                 std::istringstream iss(command);
                 Obj obj = readObj(iss);
                 if (iss)
@@ -64,9 +64,11 @@ void TcpClient::run() {
     });
 }
 
-void TcpClient::sendCmd(std::__cxx11::string cmd)
+void TcpClient::sendCmd(std::string cmd)
 {
     uint32_t size = cmd.size();
+
+    //LOG("S " << size << " " << cmd[0]);
     size = boost::endian::native_to_big(size);
     write(socket, boost::asio::buffer(&size, sizeof(size)));
     write(socket, boost::asio::buffer(cmd, cmd.size()));

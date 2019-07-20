@@ -6,12 +6,11 @@
 #include "tcpserver.h"
 #include <QTreeWidgetItem>
 #include <set>
+#include "stateholder.h"
 
 namespace Ui {
 class MainWindow;
 }
-
-
 
 class RefsView : public QMainWindow
 {
@@ -23,18 +22,13 @@ public:
 
 public slots:
     void resizeCols();
-    void process(const Obj &obj);
-    void onNewConnection();
+    void onframeChanged(std::shared_ptr<Frame> renderFrame, int totalCount);
 
 signals:
-    void frameChanged(std::shared_ptr<Frame> renderFrame);
-    void fieldSizeChange(int w, int h);
-    void field3d(const P &minP, const P &maxP, double hMin, double hMax, double cellSize);
-    void staticObject(const SObj &sobj);
+    void onFileOpen(const QString &file);
 
 private slots:
     void on_actionOptions_triggered();
-    void tickChanged(int tick);
     void itemExpanded(QTreeWidgetItem *item);
     void itemCollapsed(QTreeWidgetItem *item);
 
@@ -43,8 +37,8 @@ private slots:
 private:
     void addObjToTree(const Obj &obj);
     Ui::MainWindow *ui;
-    std::vector<std::shared_ptr<Frame>> frames;
     TcpServer tcpServer;
+    StateHolder stateHolder;
 
     std::set<QString> expandedItems;
 };

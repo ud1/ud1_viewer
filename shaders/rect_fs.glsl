@@ -12,8 +12,10 @@ void main()
 {
    // outputColor = vec4(0.5, 0.5, 0.5, 1);
 	
-	float wid = 0.03;
-	vec3 pointPosMod = sign(mod(globalPos + vec3(wid, wid, wid) * 0.5 + gridShift, vec3(1, 1, 1)) - vec3(wid, wid, wid));
+        float wid = 0.02;
+        float gridScale = 0.2;
+
+        vec3 pointPosMod = sign(mod(globalPos * gridScale + vec3(wid, wid, wid) * 0.5 + gridShift, vec3(1, 1, 1)) - vec3(wid, wid, wid));
 	float val = max(0.5, min(min(pointPosMod.x, pointPosMod.y), pointPosMod.z));
 	
 	float ang = dot(norm, normalize(lightPos - globalPos));

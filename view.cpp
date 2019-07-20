@@ -13,6 +13,7 @@
 #include "camera.h"
 #include <set>
 #include <QTimer>
+#include <ctime>
 
 NVGcolor toColor(uint32_t color) {
     return nvgRGBA((color & 0xFF000000) >> 24, (color & 0x00FF0000) >> 16, (color & 0x0000FF00) >> 8, color & 0x000000FF);
@@ -52,62 +53,62 @@ struct MeshData {
 
 struct GridData: MeshData
 {
-    void init(const P &minP, const P &maxP, double hMin, double hMax, double cellSize)
+    void init(const P &minP, const P &maxP, double hMin, double hMax, double /*cellSize*/)
     {
         double z = 0.0;
         if (hMin > 0.0)
             z = hMin;
 
-        pushV(V3(minP.x, minP.y, z));
-        pushV(V3(minP.x, maxP.y, z));
+        pushV(V3(minP.x, z, minP.y));
+        pushV(V3(minP.x, z, maxP.y));
 
-        pushV(V3(minP.x, maxP.y, z));
-        pushV(V3(maxP.x, maxP.y, z));
+        pushV(V3(minP.x, z, maxP.y));
+        pushV(V3(maxP.x, z, maxP.y));
 
-        pushV(V3(maxP.x, maxP.y, z));
-        pushV(V3(maxP.x, minP.y, z));
+        pushV(V3(maxP.x, z, maxP.y));
+        pushV(V3(maxP.x, z, minP.y));
 
-        pushV(V3(maxP.x, minP.y, z));
-        pushV(V3(minP.x, minP.y, z));
-
-
-        pushV(V3(minP.x, minP.y, hMin));
-        pushV(V3(minP.x, minP.y, hMax));
-
-        pushV(V3(minP.x, maxP.y, hMin));
-        pushV(V3(minP.x, maxP.y, hMax));
-
-        pushV(V3(maxP.x, maxP.y, hMin));
-        pushV(V3(maxP.x, maxP.y, hMax));
-
-        pushV(V3(maxP.x, minP.y, hMin));
-        pushV(V3(maxP.x, minP.y, hMax));
+        pushV(V3(maxP.x, z, minP.y));
+        pushV(V3(minP.x, z, minP.y));
 
 
-        pushV(V3(minP.x, minP.y, hMax));
-        pushV(V3(minP.x, maxP.y, hMax));
+        pushV(V3(minP.x, hMin, minP.y));
+        pushV(V3(minP.x, hMax, minP.y));
 
-        pushV(V3(minP.x, maxP.y, hMax));
-        pushV(V3(maxP.x, maxP.y, hMax));
+        pushV(V3(minP.x, hMin, maxP.y));
+        pushV(V3(minP.x, hMax, maxP.y));
 
-        pushV(V3(maxP.x, maxP.y, hMax));
-        pushV(V3(maxP.x, minP.y, hMax));
+        pushV(V3(maxP.x, hMin, maxP.y));
+        pushV(V3(maxP.x, hMax, maxP.y));
 
-        pushV(V3(maxP.x, minP.y, hMax));
-        pushV(V3(minP.x, minP.y, hMax));
+        pushV(V3(maxP.x, hMin, minP.y));
+        pushV(V3(maxP.x, hMax, minP.y));
+
+
+        pushV(V3(minP.x, hMax, minP.y));
+        pushV(V3(minP.x, hMax, maxP.y));
+
+        pushV(V3(minP.x, hMax, maxP.y));
+        pushV(V3(maxP.x, hMax, maxP.y));
+
+        pushV(V3(maxP.x, hMax, maxP.y));
+        pushV(V3(maxP.x, hMax, minP.y));
+
+        pushV(V3(maxP.x, hMax, minP.y));
+        pushV(V3(minP.x, hMax, minP.y));
 
         /*if (cellSize > 0)
         {
             for (double x = minP.x + cellSize; x < maxP.x; x += cellSize)
             {
-                pushV(V3(x, minP.y, z));
-                pushV(V3(x, maxP.y, z));
+                pushV(V3(x, z, minP.y));
+                pushV(V3(x, z, maxP.y));
             }
 
             for (double y = minP.y + cellSize; y < maxP.y; y += cellSize)
             {
-                pushV(V3(minP.x, y, z));
-                pushV(V3(maxP.x, y, z));
+                pushV(V3(minP.x, z, y));
+                pushV(V3(maxP.x, z, y));
             }
         }*/
 
@@ -185,6 +186,11 @@ struct ViewData
 
     std::vector<SObj> staticObjects;
 
+    ~ViewData()
+    {
+        nvgDeleteGL3(vg);
+    }
+
     void initialize()
     {
         glewExperimental = GL_TRUE;
@@ -207,7 +213,7 @@ struct ViewData
         rectShader.buildShaderProgram("://shaders/rect_vs.glsl", "://shaders/rect_gs.glsl", "://shaders/rect_fs.glsl");
         cylInner025Shader.buildShaderProgram("://shaders/cylinder025_vs.glsl", "://shaders/cylinder025_gs.glsl", "://shaders/cylinder025_fs.glsl");
 
-        camera.position = V3(0, 0, 11);
+        camera.position = V3(0, 20, -40);
         dummyPointData.init();
     }
 
@@ -306,7 +312,7 @@ struct ViewData
 
             if (frame)
             {
-                std::lock_guard<std::mutex> guard(frame->mutex);
+                std::lock_guard<std::recursive_mutex> guard(frame->mutex);
 
                 for (const Obj& obj : frame->objs)
                 {
@@ -373,7 +379,7 @@ struct ViewData
 
             if (frame)
             {
-                std::lock_guard<std::mutex> guard(frame->mutex);
+                std::lock_guard<std::recursive_mutex> guard(frame->mutex);
 
                 for (const Obj& obj : frame->objs)
                 {
@@ -462,6 +468,50 @@ struct ViewData
                 }
             }
             nvgFill(vg);
+        }
+        else if (type == "rects")
+        {
+            uint32_t color = getInt("c", sobj);
+            nvgFillColor(vg, toColor(color));
+            nvgStrokeColor(vg, toColor(color));
+
+            double hw = getDouble("hw", sobj);
+            if (hw == 0)
+                hw = 1;
+
+            double dw = getDouble("dw", sobj);
+            if (dw == 0)
+                dw = 0.45;
+
+            for (int i = 0; i < 10000; ++i)
+            {
+                std::ostringstream oss;
+                oss << "p" << i;
+                if (sobj.count(oss.str()))
+                {
+                    P pi = getP(oss.str(), sobj);
+
+                    nvgBeginPath(vg);
+                    nvgMoveTo(vg, (pi.x - 0.5) * hw, (pi.y - 0.5) * hw);
+                    nvgLineTo(vg, (pi.x + 0.5) * hw, (pi.y - 0.5) * hw);
+                    nvgLineTo(vg, (pi.x + 0.5) * hw, (pi.y + 0.5) * hw);
+                    nvgLineTo(vg, (pi.x - 0.5) * hw, (pi.y + 0.5) * hw);
+                    nvgLineTo(vg, (pi.x - 0.5) * hw, (pi.y - 0.5) * hw);
+                    nvgStroke(vg);
+
+                    nvgBeginPath(vg);
+                    nvgMoveTo(vg, (pi.x - dw) * hw, (pi.y - dw) * hw);
+                    nvgLineTo(vg, (pi.x + dw) * hw, (pi.y - dw) * hw);
+                    nvgLineTo(vg, (pi.x + dw) * hw, (pi.y + dw) * hw);
+                    nvgLineTo(vg, (pi.x - dw) * hw, (pi.y + dw) * hw);
+                    nvgLineTo(vg, (pi.x - dw) * hw, (pi.y - dw) * hw);
+                    nvgFill(vg);
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
     }
 
@@ -712,6 +762,8 @@ struct ViewData
 
     void processInput()
     {
+        using namespace std;
+
         if (mode3d)
         {
             V3 accel = V3(0.0f, 0.0f, 0.0f);
@@ -752,7 +804,9 @@ struct ViewData
                 accel.z = -sgn;
             }
 
-            accel *= 10.0f;
+            float maxVel = 50.0f;
+
+            accel *= maxVel;
 
             float dt = 0.016;
             V3 oldVel = vel;
@@ -767,7 +821,7 @@ struct ViewData
             if (!pressedKeys.count(Qt::Key_Space) && !pressedKeys.count(Qt::Key_Control) && vel.z * oldVel.z < 0.0f)
                 vel.z = 0.0f;
 
-            float maxVel = 10.0f;
+
 
             if (glm::length(vel) > maxVel)
                 vel *= (maxVel / glm::length(vel));
@@ -831,7 +885,7 @@ void View::initializeGL()
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-    timer->start(60);
+    timer->start(16);
 }
 
 void View::resizeGL(int w, int h)
@@ -841,6 +895,8 @@ void View::resizeGL(int w, int h)
 
     this->viewData->camera.aspectRatio = (double) w / (double) h;
 }
+
+
 
 void View::paintGL()
 {
@@ -975,13 +1031,13 @@ void View::updateStatusString(const QString &str)
     }
 }
 
-void View::changeFrame(std::shared_ptr<Frame> renderFrame)
+void View::changeFrame(std::shared_ptr<Frame> renderFrame, int /*totalCount*/)
 {
     this->renderFrame = renderFrame;
     if (!this->renderFrame)
         viewData->staticObjects.clear();
 
-    update();
+    //update();
 }
 
 void View::fieldSizeChange(int w, int h)

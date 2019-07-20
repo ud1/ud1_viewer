@@ -8,6 +8,8 @@
 #define GLOBAL_VAR extern
 #endif // MY_IMPLEMENTATION
 
+#define ENABLE_LOGGING 1
+
 #if ENABLE_LOGGING
 #include <iostream>
 #include <fstream>
