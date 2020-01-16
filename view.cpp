@@ -15,6 +15,8 @@
 #include <QTimer>
 #include <ctime>
 
+bool yIsUp = true;
+
 NVGcolor toColor(uint32_t color) {
     return nvgRGBA((color & 0xFF000000) >> 24, (color & 0x00FF0000) >> 16, (color & 0x0000FF00) >> 8, color & 0x000000FF);
 }
@@ -158,6 +160,14 @@ void setColor(GLint uniform, uint32_t color)
     float a = (color & 0x000000FF) / 255.0f;
 
     glUniform4f(uniform, r, g, b, a);
+}
+
+float transformY(double y, double h)
+{
+    if (yIsUp)
+        return h - y;
+
+    return y;
 }
 
 struct ViewData
@@ -308,7 +318,7 @@ struct ViewData
             nvgStroke(vg);
 
             for (const SObj &obj : staticObjects)
-                renderObj2d(obj);
+                renderObj2d(obj, h);
 
             if (frame)
             {
@@ -318,7 +328,7 @@ struct ViewData
                 {
                     for (const auto& p : obj.subObjs)
                     {
-                        renderObj2d(p.second);
+                        renderObj2d(p.second, h);
                     }
                 }
             }
@@ -392,7 +402,7 @@ struct ViewData
         }
     }
 
-    void renderObj2d(const SObj &sobj)
+    void renderObj2d(const SObj &sobj, double h)
     {
         std::string type = getStr("type", sobj);
         if (type == "circle")
@@ -403,7 +413,7 @@ struct ViewData
 
             nvgFillColor(vg, toColor(color));
             nvgBeginPath(vg);
-            nvgEllipse(vg, p.x, p.y, rad, rad);
+            nvgEllipse(vg, p.x, transformY(p.y, h), rad, rad);
             nvgFill(vg);
         }
         if (type == "circumference")
@@ -414,7 +424,7 @@ struct ViewData
 
             nvgStrokeColor(vg, toColor(color));
             nvgBeginPath(vg);
-            nvgEllipse(vg, p.x, p.y, rad, rad);
+            nvgEllipse(vg, p.x, transformY(p.y, h), rad, rad);
             nvgStroke(vg);
         }
         else if (type == "line")
@@ -425,7 +435,7 @@ struct ViewData
 
             nvgStrokeColor(vg, toColor(color));
             nvgBeginPath(vg);
-            nvgMoveTo(vg, p1.x, p1.y);
+            nvgMoveTo(vg, p1.x, transformY(p1.y, h));
 
             for (int i = 2; i < 10000; ++i)
             {
@@ -434,7 +444,7 @@ struct ViewData
                 if (sobj.count(oss.str()))
                 {
                     P pi = getP(oss.str(), sobj);
-                    nvgLineTo(vg, pi.x, pi.y);
+                    nvgLineTo(vg, pi.x, transformY(pi.y, h));
                 }
                 else
                 {
@@ -451,7 +461,7 @@ struct ViewData
 
             nvgFillColor(vg, toColor(color));
             nvgBeginPath(vg);
-            nvgMoveTo(vg, p1.x, p1.y);
+            nvgMoveTo(vg, p1.x, transformY(p1.y, h));
 
             for (int i = 2; i < 10000; ++i)
             {
@@ -460,7 +470,7 @@ struct ViewData
                 if (sobj.count(oss.str()))
                 {
                     P pi = getP(oss.str(), sobj);
-                    nvgLineTo(vg, pi.x, pi.y);
+                    nvgLineTo(vg, pi.x, transformY(pi.y, h));
                 }
                 else
                 {
@@ -492,19 +502,19 @@ struct ViewData
                     P pi = getP(oss.str(), sobj);
 
                     nvgBeginPath(vg);
-                    nvgMoveTo(vg, (pi.x - 0.5) * hw, (pi.y - 0.5) * hw);
-                    nvgLineTo(vg, (pi.x + 0.5) * hw, (pi.y - 0.5) * hw);
-                    nvgLineTo(vg, (pi.x + 0.5) * hw, (pi.y + 0.5) * hw);
-                    nvgLineTo(vg, (pi.x - 0.5) * hw, (pi.y + 0.5) * hw);
-                    nvgLineTo(vg, (pi.x - 0.5) * hw, (pi.y - 0.5) * hw);
+                    nvgMoveTo(vg, (pi.x - 0.5) * hw, transformY((pi.y - 0.5) * hw, h));
+                    nvgLineTo(vg, (pi.x + 0.5) * hw, transformY((pi.y - 0.5) * hw, h));
+                    nvgLineTo(vg, (pi.x + 0.5) * hw, transformY((pi.y + 0.5) * hw, h));
+                    nvgLineTo(vg, (pi.x - 0.5) * hw, transformY((pi.y + 0.5) * hw, h));
+                    nvgLineTo(vg, (pi.x - 0.5) * hw, transformY((pi.y - 0.5) * hw, h));
                     nvgStroke(vg);
 
                     nvgBeginPath(vg);
-                    nvgMoveTo(vg, (pi.x - dw) * hw, (pi.y - dw) * hw);
-                    nvgLineTo(vg, (pi.x + dw) * hw, (pi.y - dw) * hw);
-                    nvgLineTo(vg, (pi.x + dw) * hw, (pi.y + dw) * hw);
-                    nvgLineTo(vg, (pi.x - dw) * hw, (pi.y + dw) * hw);
-                    nvgLineTo(vg, (pi.x - dw) * hw, (pi.y - dw) * hw);
+                    nvgMoveTo(vg, (pi.x - dw) * hw, transformY((pi.y - dw) * hw, h));
+                    nvgLineTo(vg, (pi.x + dw) * hw, transformY((pi.y - dw) * hw, h));
+                    nvgLineTo(vg, (pi.x + dw) * hw, transformY((pi.y + dw) * hw, h));
+                    nvgLineTo(vg, (pi.x - dw) * hw, transformY((pi.y + dw) * hw, h));
+                    nvgLineTo(vg, (pi.x - dw) * hw, transformY((pi.y - dw) * hw, h));
                     nvgFill(vg);
                 }
                 else
@@ -965,7 +975,7 @@ void View::mouseMoveEvent(QMouseEvent *event)
         P titlePos = (viewData->zoomCenter + (viewData->mousePos - P(0.5, 0.5))/viewData->zoom)*P(this->viewData->wid, this->viewData->heig);
         P clampedTitlePos = clampP(titlePos, P(0, 0), P(this->w, this->h));
 
-        QString status = QString("Pos %1 %2 (%3 %4)").arg(clampedTitlePos.x).arg(clampedTitlePos.y).arg(titlePos.x).arg(titlePos.y);
+        QString status = QString("Pos %1 %2 (%3 %4)").arg(clampedTitlePos.x).arg(transformY(clampedTitlePos.y, h)).arg(titlePos.x).arg(transformY(titlePos.y, h));
 
         if (viewData->rulerStarted)
         {

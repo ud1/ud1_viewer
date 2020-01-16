@@ -107,6 +107,7 @@ void writeVarT(std::ostream &ostream, const var_t &v)
 std::string toString(const var_t &v)
 {
     std::ostringstream oss;
+    oss.precision(18);
     if (std::holds_alternative<std::string>(v))
     {
         return std::get<std::string>(v);
