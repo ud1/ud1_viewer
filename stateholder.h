@@ -16,7 +16,7 @@ public:
 
 signals:
     void frameChanged(std::shared_ptr<Frame> renderFrame, int totalCount);
-    void fieldSizeChange(int w, int h);
+    void fieldSizeChange(int w, int h, int cellSize);
     void field3d(const P &minP, const P &maxP, double hMin, double hMax, double cellSize);
     void staticObject(const SObj &sobj);
 

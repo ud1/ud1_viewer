@@ -295,7 +295,7 @@ struct ViewData
         }
     }
 
-    void render(const Frame *frame, int w, int h)
+    void render(const Frame *frame, int w, int h, int cellSize)
     {
         // Draw the scene:
         glClear(GL_COLOR_BUFFER_BIT);
@@ -316,6 +316,27 @@ struct ViewData
             nvgLineTo(vg, 0, h);
             nvgLineTo(vg, 0, 0);
             nvgStroke(vg);
+
+            if (cellSize > 0 && cellSize / zoom < 0.2)
+            {
+                nvgStrokeColor(vg, nvgRGB(0.7,0.7,0.7));
+                nvgStrokeWidth(vg, 0.5 / zoom);
+                nvgBeginPath(vg);
+
+                for (int x = cellSize; x < w; x += cellSize)
+                {
+                    nvgMoveTo(vg, x, 0);
+                    nvgLineTo(vg, x, h);
+                }
+
+                for (int y = cellSize; y < w; y += cellSize)
+                {
+                    nvgMoveTo(vg, 0, y);
+                    nvgLineTo(vg, w, y);
+                }
+
+                nvgStroke(vg);
+            }
 
             for (const SObj &obj : staticObjects)
                 renderObj2d(obj, h);
@@ -489,9 +510,9 @@ struct ViewData
             if (hw == 0)
                 hw = 1;
 
-            double dw = getDouble("dw", sobj);
-            if (dw == 0)
-                dw = 0.45;
+            double dwDef = getDouble("dw", sobj);
+            if (dwDef == 0)
+                dwDef = 0.45;
 
             for (int i = 0; i < 10000; ++i)
             {
@@ -499,6 +520,9 @@ struct ViewData
                 oss << "p" << i;
                 if (sobj.count(oss.str()))
                 {
+                    double dwOvr = getDouble("dw" + std::to_string(i), sobj);
+                    double dw = dwOvr > 0 ? dwOvr : dwDef;
+
                     P pi = getP(oss.str(), sobj);
 
                     nvgBeginPath(vg);
@@ -911,7 +935,7 @@ void View::resizeGL(int w, int h)
 void View::paintGL()
 {
     std::shared_ptr<Frame> renderFrame = this->renderFrame;
-    viewData->render(renderFrame.get(), w, h);
+    viewData->render(renderFrame.get(), w, h, cellSize);
 
     if (glm::length(viewData->vel) > 0.001)
     {
@@ -983,6 +1007,10 @@ void View::mouseMoveEvent(QMouseEvent *event)
             double rad = viewData->rulerStart.dist(curPos);
             status += " dist: ";
             status += QString("%1").arg(rad);
+            int dx = (int) curPos.x - (int) viewData->rulerStart.x;
+            int dy = ((int) curPos.y - (int) viewData->rulerStart.y) * (yIsUp ? -1 : 1);
+            int intDist = std::abs(dx) + std::abs(dy);
+            status += QString(" (%1,%2: %3)").arg(dx).arg(dy).arg(intDist);
         }
         updateStatusString(status);
     }
@@ -1050,10 +1078,11 @@ void View::changeFrame(std::shared_ptr<Frame> renderFrame, int /*totalCount*/)
     //update();
 }
 
-void View::fieldSizeChange(int w, int h)
+void View::fieldSizeChange(int w, int h, int cellSize)
 {
     this->w = w;
     this->h = h;
+    this->cellSize = cellSize;
     viewData->mode3d = false;
 }
 

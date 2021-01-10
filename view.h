@@ -43,7 +43,7 @@ signals:
 
 public slots:
     void changeFrame(std::shared_ptr<Frame> renderFrame, int totalCount);
-    void fieldSizeChange(int w, int h);
+    void fieldSizeChange(int w, int h, int cellSize);
     void field3d(const P &minP, const P &maxP, double hMin, double hMax, double cellSize);
     void addStaticObject(const SObj &sobj);
     void settingsChanged();
@@ -52,6 +52,7 @@ private:
     std::shared_ptr<Frame> renderFrame;
 
     int w = 1000, h = 1000;
+    int cellSize = 0;
 };
 
 #endif // VIEW_H

@@ -49,9 +49,10 @@ void StateHolder::process(const Obj &obj)
     {
         int w = obj.getIntProp("w");
         int h = obj.getIntProp("h");
+        int cellSize = obj.getIntProp("cellSize");
 
         if (w > 0 && h > 0)
-            emit fieldSizeChange(w, h);
+            emit fieldSizeChange(w, h, cellSize);
         return;
     }
 

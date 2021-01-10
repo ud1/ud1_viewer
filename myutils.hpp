@@ -94,10 +94,10 @@ inline double atan2_approximation2( double y, double x )
 struct P {
     explicit P() {}
 
-    constexpr explicit P ( double angle ) : x(cos(angle)), y(sin(angle)) {}
+    explicit P ( double angle ) : x(cos(angle)), y(sin(angle)) {}
     constexpr explicit P ( double x, double y ) : x ( x ), y ( y ) {}
 
-    constexpr double dist ( P const &o ) const {
+    double dist ( P const &o ) const {
         return sqrt ( sqr ( x - o.x ) + sqr ( y - o.y ) );
     }
 
@@ -109,11 +109,11 @@ struct P {
         return x*x + y*y;
     }
 
-    constexpr double len() const {
+    double len() const {
         return sqrt ( x*x + y*y );
     }
 
-    constexpr P norm() const {
+    P norm() const {
         double l = len();
         if ( l == 0.0 )
             return P ( 1.0, 0.0 );
@@ -165,13 +165,13 @@ struct P {
         return ( std::abs ( x - o.x ) + std::abs ( y - o.y ) ) >= EPS;
     }
 
-    constexpr P rotate ( double angle ) const {
+    P rotate ( double angle ) const {
         double cs = cos ( angle );
         double sn = sin ( angle );
         return P ( x * cs - y * sn, x * sn + y * cs );
     }
 
-    constexpr double getAngle () const {
+    double getAngle () const {
         double absoluteAngleTo = atan2 (this->y, this->x );
         return absoluteAngleTo;
     }
